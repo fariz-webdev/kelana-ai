@@ -11,7 +11,7 @@ def get_trip_category(budget):
     if budget < 1000:
         return "Backpacker"
     elif budget <= 3000:
-        return "Standart"
+        return "Standard"
     else:
         return "Luxury"
 
@@ -20,7 +20,7 @@ def get_transportation_recommendation(category):
     match category:
         case "Backpacker":
             return "Bus"
-        case "Standart":
+        case "Standard":
             return "Train"
         case "Luxury":
             return "Flight"
