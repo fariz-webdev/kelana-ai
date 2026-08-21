@@ -95,6 +95,7 @@ from pydantic import BaseModel
 from services.trip_service import (calculate_daily_budget, get_trip_category, get_transportation_recommendation)
 from models.trip import Trip
 from database import SessionLocal, init_db
+from services.bedrock_service import get_ai_recommendation
 
 class TripRequest(BaseModel):
     destination:  str
@@ -140,18 +141,29 @@ def categories():
 def create_trip(request: TripRequest):
     daily_budget = calculate_daily_budget(request.budget, request.days)
     category = get_trip_category(request.budget)
+    recommended_transport = get_transportation_recommendation(category)
 
-# create a Trip ORM object
+    ai_recommendation = get_ai_recommendation(
+        destination=request.destination,
+        days=request.days,
+        budget=request.budget,
+        travel_style=request.travel_style,
+        daily_budget=daily_budget,
+        recommended_transport=recommended_transport,
+    )
+
+    # create a Trip ORM object
     trip = Trip(
-        destination   = request.destination,
-        days          = request.days,
-        budget        = request.budget,
-        category      = category,
-        daily_budget  = daily_budget,
+        destination         = request.destination,
+        days                = request.days,
+        budget              = request.budget,
+        category            = category,
+        daily_budget        = daily_budget,
+        ai_recommendation   = ai_recommendation,
     )
 
 
-# save to PostgreSQL
+    # save to PostgreSQL
     db = SessionLocal()
     db.add(trip)
     db.commit()
