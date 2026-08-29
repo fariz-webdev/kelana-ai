@@ -98,12 +98,18 @@ from models.trip import Trip
 from database import SessionLocal, init_db
 from services.bedrock_service import get_ai_recommendation
 from fastapi.middleware.cors import CORSMiddleware
+from services.auth_service import (hash_password, register_user,verify_password)
 
 class TripRequest(BaseModel):
     destination:  str
     days:         int
     budget:       float
     travel_style: str
+
+class RegisterRequest(BaseModel):
+    name:       str
+    email:      str
+    password:   str
 
 app = FastAPI()
 
@@ -174,6 +180,7 @@ def create_trip(request: TripRequest):
         days                = request.days,
         budget              = request.budget,
         category            = category,
+        travel_style        = request.travel_style,
         daily_budget        = daily_budget,
         ai_recommendation   = ai_recommendation,
     )
@@ -185,8 +192,40 @@ def create_trip(request: TripRequest):
     db.commit()
     db.refresh(trip)
     db.close()
-    return trip
 
+    # include travel_style in response (not stored in DB)
+    return {
+        "id":               trip.id,
+        "destination":      trip.destination,
+        "days":             trip.days,
+        "budget":           trip.budget,
+        "category":         trip.category,
+        "daily_budget":     trip.daily_budget,
+        "travel_style":     request.travel_style,
+        "ai_recommendation": trip.ai_recommendation,
+        "created_at":       trip.created_at,
+    }
+
+@app.post("api/v1/auth/register")
+def register(request: RegisterRequest):
+    db = SessionLocal()
+    try:
+        user = register_user(
+            db       = db,
+            name     = request.name,
+            email    = request.email,
+            password = request.password,
+        )
+        return {
+            "id":         user.id,
+            "name":       user.name,
+            "email":      user.email,
+            "created_at": user.created_at,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    finally:
+        db.close()
 
 @app.get("/api/v1/trips")
 def list_trips():

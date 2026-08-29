@@ -1,66 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-
-interface TripResponse {
-  id: number;
-  destination: string;
-  days: number;
-  budget: number;
-  category: string;
-  daily_budget: number;
-  ai_recommendation: string;
-}
-
-interface DayPlan {
-  title: string;
-  body: string;
-}
-
-/**
- * Split the markdown AI response into per-day blocks.
- * Handles "## Day 1", "**Day 1**", "Day 1:", "Day 2-3:"
- */
-function parseDayPlans(markdown: string): DayPlan[] {
-  const parts = markdown.split(/(?=(?:#{1,3}\s*)?(?:\*\*)?Day\s+[\d\-–]+)/im);
-  const plans: DayPlan[] = [];
-
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const [firstLine, ...rest] = trimmed.split("\n");
-    const title = firstLine
-      .replace(/^#{1,3}\s*/, "")
-      .replace(/\*\*/g, "")
-      .replace(/:$/, "")
-      .trim();
-    const body = rest.join("\n").trim();
-    if (title) plans.push({ title, body });
-  }
-
-  return plans.length ? plans : [{ title: "Itinerary", body: markdown }];
-}
-
-/**
- * Picsum Photos — stable, free, no API key needed.
- * Uses a deterministic seed from the destination name so the same
- * destination always gets the same image.
- */
-function heroImageUrl(destination: string): string {
-  let seed = 0;
-  for (let i = 0; i < destination.length; i++) {
-    seed = (seed * 31 + destination.charCodeAt(i)) & 0xffff;
-  }
-  return `https://picsum.photos/seed/${seed}/1200/500`;
-}
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   const [destination, setDestination] = useState("");
   const [budget, setBudget]           = useState("");
   const [days, setDays]               = useState("");
   const [travelStyle, setTravelStyle] = useState("");
-  const [result, setResult]           = useState<TripResponse | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
@@ -68,7 +16,6 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setResult(null);
 
     try {
       const res = await fetch("http://localhost:8000/api/v1/trips", {
@@ -87,75 +34,13 @@ export default function Home() {
         throw new Error(err.detail ?? "Something went wrong");
       }
 
-      setResult(await res.json());
+      await res.json();
+      router.push("/trips");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to connect to the server");
     } finally {
       setLoading(false);
     }
-  }
-
-  /* ── Result view ─────────────────────────────────────────── */
-  if (result) {
-    const dayPlans = parseDayPlans(result.ai_recommendation ?? "");
-
-    return (
-      <main className="min-h-screen bg-white">
-        {/* Hero image — full-bleed on all screens */}
-        <div
-          className="relative w-full h-48 sm:h-64 md:h-72 lg:h-80 bg-gray-200 bg-cover bg-center"
-          style={{ backgroundImage: `url('${heroImageUrl(result.destination)}')` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/10" />
-          <div className="absolute inset-0 flex items-end px-4 sm:px-8 pb-4 sm:pb-6 max-w-5xl mx-auto">
-            <h1 className="text-white text-2xl sm:text-3xl font-bold drop-shadow-lg">
-              KelanaAI
-            </h1>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {/* Summary bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border border-gray-200 rounded-full px-4 sm:px-6 py-2.5 mb-6 text-sm font-semibold text-gray-800">
-            <span>Destination: {result.destination}</span>
-            <span className="text-blue-500">{travelStyle}</span>
-            <span>Budget: USD {result.budget.toLocaleString()}</span>
-          </div>
-
-          {/* Section label */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-xs font-bold text-blue-500 tracking-widest whitespace-nowrap">
-              AI RECOMMENDATION
-            </span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* Day cards — single col on mobile, 2-col grid on md+ */}
-          <div className="grid grid-cols-1 gap-3">
-            {dayPlans.map((plan, idx) => (
-              <div key={idx} className="bg-gray-100 rounded-2xl px-5 py-4">
-                <p className="text-blue-500 font-semibold text-sm mb-2">{plan.title}</p>
-                <div className="text-gray-600 text-sm leading-relaxed prose prose-sm max-w-none
-                                prose-p:my-1 prose-ul:my-1 prose-ul:pl-4
-                                prose-li:my-0.5 prose-li:marker:text-blue-400
-                                prose-strong:text-gray-800 prose-strong:font-semibold">
-                  <ReactMarkdown>{plan.body}</ReactMarkdown>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Back */}
-          <button
-            onClick={() => setResult(null)}
-            className="mt-6 text-sm text-blue-400 hover:text-blue-600 underline"
-          >
-            ← Plan another trip
-          </button>
-        </div>
-      </main>
-    );
   }
 
   /* ── Form view ───────────────────────────────────────────── */
@@ -240,8 +125,11 @@ export default function Home() {
               className="w-full bg-transparent text-gray-500 text-sm outline-none cursor-pointer"
             >
               <option value="" disabled>Select a style</option>
-              <option value="Backpacker">Backpacker</option>
-              <option value="Standard">Standard</option>
+              <option value="Solo">Solo</option>
+              <option value="Couple">Couple</option>
+              <option value="Family">Family</option>
+              <option value="Business">Business</option>
+              <option value="Cultural">Cultural</option>
               <option value="Luxury">Luxury</option>
             </select>
           </div>
