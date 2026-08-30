@@ -92,13 +92,14 @@
 # session 3
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from services.trip_service import (calculate_daily_budget, get_trip_category, get_transportation_recommendation)
 from models.trip import Trip
 from database import SessionLocal, init_db
 from services.bedrock_service import get_ai_recommendation
 from fastapi.middleware.cors import CORSMiddleware
-from services.auth_service import (hash_password, register_user,verify_password)
+from services.auth_service import register_user, login_user
+import os
 
 class TripRequest(BaseModel):
     destination:  str
@@ -111,21 +112,34 @@ class RegisterRequest(BaseModel):
     email:      str
     password:   str
 
+    @field_validator("email")
+    @classmethod
+    def email_must_contain_at(cls, v: str) -> str:
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Invalid email address")
+        return v.lower().strip()
+
+class LoginRequest(BaseModel):
+    email:    str
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def email_must_contain_at(cls, v: str) -> str:
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Invalid email address")
+        return v.lower().strip()
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 init_db()
 
@@ -206,7 +220,7 @@ def create_trip(request: TripRequest):
         "created_at":       trip.created_at,
     }
 
-@app.post("api/v1/auth/register")
+@app.post("/api/v1/auth/register", status_code=201)
 def register(request: RegisterRequest):
     db = SessionLocal()
     try:
@@ -227,6 +241,16 @@ def register(request: RegisterRequest):
     finally:
         db.close()
 
+@app.post("/api/v1/auth/login")
+def login(request: LoginRequest):
+    db = SessionLocal()
+    try:
+        return login_user(db=db, email=request.email, password=request.password)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    finally:
+        db.close()
+        
 @app.get("/api/v1/trips")
 def list_trips():
     db = SessionLocal()
