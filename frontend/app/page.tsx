@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -11,20 +11,45 @@ export default function Home() {
   const [travelStyle, setTravelStyle] = useState("");
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      router.replace("/login");
+    } else {
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    try {
-      const res = await fetch("http://localhost:8000/api/v1/trips", {
+    // try {
+    //   const res = await fetch("http://localhost:8000/api/v1/trips", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({
+    //       destination,
+    //       days:         Number(days),
+    //       budget:       Number(budget),
+    //       travel_style: travelStyle,
+    //     }),
+    //   });
+      try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trips`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          destination,
-          days:         Number(days),
-          budget:       Number(budget),
+          destination: destination,
+          budget: Number(budget),
+          days: Number(days),
           travel_style: travelStyle,
         }),
       });
@@ -44,6 +69,14 @@ export default function Home() {
   }
 
   /* ── Form view ───────────────────────────────────────────── */
+  if (!authChecked) {
+    return (
+      <main className="flex-1 flex items-center justify-center min-h-screen bg-white">
+        <div className="w-8 h-8 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-white flex flex-col">
       {/* Hero section */}

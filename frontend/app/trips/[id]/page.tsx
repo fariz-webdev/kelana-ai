@@ -1,11 +1,11 @@
-import { getTrip } from "@/services/tripService";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import TripRecommendation from "@/components/TripRecommendation";
+"use client";
 
-interface TripDetailPageProps {
-  params: Promise<{ id: string }>;
-}
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { getTrip } from "@/services/tripService";
+import { type Trip } from "@/services/tripService";
+import TripRecommendation from "@/components/TripRecommendation";
 
 const categoryStyles: Record<string, string> = {
   Standard: "bg-blue-100 text-blue-600",
@@ -13,22 +13,53 @@ const categoryStyles: Record<string, string> = {
   Luxury: "bg-green-100 text-green-600",
 };
 
-export default async function TripDetailPage({ params }: TripDetailPageProps) {
-  const { id } = await params;
-  const trip = await getTrip(Number(id));
+export default function TripDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!trip || !trip.id) {
-    notFound();
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    getTrip(Number(id), token)
+      .then(setTrip)
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Failed to load trip.")
+      )
+      .finally(() => setLoading(false));
+  }, [id, router]);
+
+  if (loading) {
+    return (
+      <main className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-8 h-8 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin" />
+      </main>
+    );
   }
 
-  const badgeStyle =
-    categoryStyles[trip.category] ?? "bg-gray-100 text-gray-600";
+  if (error || !trip) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-red-500 text-sm">{error ?? "Trip not found."}</p>
+        <Link href="/trips" className="text-sm text-blue-500 hover:underline">
+          ← Back to Trip History
+        </Link>
+      </main>
+    );
+  }
+
+  const badgeStyle = categoryStyles[trip.category] ?? "bg-gray-100 text-gray-600";
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         
-
         {/* Title */}
         <h1 className="text-2xl font-bold text-gray-900 mb-6">
           {trip.destination}
@@ -36,7 +67,6 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
 
         {/* Info grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          {/* Destination */}
           <div className="bg-gray-100 rounded-xl px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
               Destination
@@ -44,7 +74,6 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
             <p className="text-gray-900 font-medium">{trip.destination}</p>
           </div>
 
-          {/* Budget */}
           <div className="bg-gray-100 rounded-xl px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
               Budget
@@ -54,22 +83,18 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
             </p>
           </div>
 
-          {/* Category */}
           <div className="bg-gray-100 rounded-xl px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
               Category
             </p>
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-gray-900 font-medium">{trip.category}</p>
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}
-              >
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeStyle}`}>
                 {trip.category}
               </span>
             </div>
           </div>
 
-          {/* Days */}
           <div className="bg-gray-100 rounded-xl px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
               Days
@@ -94,7 +119,7 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-5 transition-colors"
         >
           <span aria-hidden="true">←</span>
-          Back to Trips History
+          Back to Trip History
         </Link>
       </div>
     </main>

@@ -14,12 +14,27 @@ export interface Trip{
     ai_recommendation: string | null;
     created_at: string;
 }
-export async function getTrips(): Promise<Trip[]> {
-  const res = await fetch(`${API_URL}/trips`, { cache: "no-store" })
+
+function authHeaders(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export async function getTrips(token: string): Promise<Trip[]> {
+  const res = await fetch(`${API_URL}/trips`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch trips: ${res.status} ${res.statusText}`);
+  }
   return res.json()
 }
-export async function getTrip(id: number) {
-  const res = await fetch(`${API_URL}/trips/${id}`)
+export async function getTrip(id: number, token: string): Promise<Trip> {
+  const res = await fetch(`${API_URL}/trips/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch trip ${id}: ${res.status} ${res.statusText}`)
+  }
   return res.json()
 }
 export async function generateTrip(data: any) {
