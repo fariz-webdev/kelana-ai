@@ -84,9 +84,6 @@
 #     destinations.append(destination2)
 
 
-
-
-
 # print_trip_summary(destination, days, budget)
 
 # session 3
@@ -99,9 +96,10 @@ from models.trip import Trip
 from models.user import User
 from database import SessionLocal, init_db
 from services.bedrock_service import get_ai_recommendation
-from fastapi.middleware.cors import CORSMiddleware
 from services.auth_service import register_user, login_user, get_current_user
+from services.kb_service import ask_knowledge_base
 import os
+
 
 class TripRequest(BaseModel):
     destination:  str
@@ -137,6 +135,10 @@ class LoginRequest(BaseModel):
             raise ValueError("Invalid email address")
         return v.lower().strip()
 
+class AskRequest(BaseModel):
+    question: str
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -164,21 +166,6 @@ def check_health():
 @app.get("/api/v1/trip-categories")
 def categories():
     return ["Backpacker", "Standard", "Luxury"]
-
-# POST endpoint - receives JSON, returns JSON
-# @app.post("/api/v1/trips")
-# def create_trip(request: TripRequest):
-#     daily_budget = calculate_daily_budget(request.budget, request.days)
-#     category = get_trip_category(request.budget)
-#     recommended_transport = get_transportation_recommendation(category)
-#     return {
-#        "destination" : request.destination,
-#        "budget" : request.budget,
-#        "daily_budget" : daily_budget,
-#        "category" : category,
-#        "travel_style" : request.travel_style,
-#        "recommended_transport" : recommended_transport
-#             }
 
 @app.post("/api/v1/trips")
 def create_trip(request: TripRequest, current_user: User = Depends(get_current_user)):
@@ -270,7 +257,7 @@ def list_trips(current_user: User = Depends(get_current_user)):
         return db.query(Trip).filter(Trip.user_id == current_user.id).all()
     finally:
         db.close()
-    
+
 
 @app.get("/api/v1/trips/{trip_id}")
 def get_trip(trip_id: int, current_user: User = Depends(get_current_user)):
@@ -279,7 +266,6 @@ def get_trip(trip_id: int, current_user: User = Depends(get_current_user)):
         trip = db.query(Trip).filter(Trip.id == trip_id, Trip.user_id == current_user.id).first()
     finally:
         db.close()
-    # handling not found
     if trip is None:
         raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
     return trip
@@ -315,7 +301,6 @@ def update_trip(trip_id: int, request: TripUpdateRequest, current_user: User = D
         db.close()
 
 
-
 @app.delete("/api/v1/trips/{trip_id}")
 def delete_trip(trip_id: int, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
@@ -334,3 +319,28 @@ def delete_trip(trip_id: int, current_user: User = Depends(get_current_user)):
         db.close()
 
 
+@app.post("/api/v1/ask")
+def ask(request: AskRequest, current_user: User = Depends(get_current_user)):
+    """
+    Send a question to the AWS Bedrock Knowledge Base and return
+    a grounded answer along with the deduplicated source documents.
+
+    Requires a valid JWT token (Authorization: Bearer <token>).
+
+    Response shape:
+        {
+            "answer":  str,
+            "sources": [{ "filename": str, "source": str }, ...]
+        }
+    """
+    if not request.question or not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question must not be empty")
+
+    try:
+        result = ask_knowledge_base(request.question.strip())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Knowledge base error: {str(e)}")
+
+    return result

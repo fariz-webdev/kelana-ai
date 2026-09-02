@@ -8,6 +8,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const isHome = pathname === "/";
+  const isAsk = pathname.startsWith("/assistant");
   const isTrips = pathname.startsWith("/trips");
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -60,6 +61,17 @@ export default function Header() {
             }`}
           >
             Plan a Trip
+          </Link>
+
+          <Link
+            href="/assistant"
+            className={`text-sm font-semibold transition-colors ${
+              isAsk
+                ? "px-4 py-1.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Ask
           </Link>
 
           <Link
