@@ -96,7 +96,7 @@ export async function getMessages(
     conversationID:number,
     token: string
 ): Promise<Message[]> {
-    const res = await fetch(`${API_URL}/conversations/${conversationID}`, {
+    const res = await fetch(`${API_URL}/conversations/${conversationID}/messages`, {
         headers: authHeaders(token),
     });
 
@@ -112,7 +112,7 @@ export async function sendMessage(
     content: string,
     token: string
 ): Promise<SendMessageRespone> {
-    const res = await fetch(`${API_URL}/conversations/${conversationID}`, {
+    const res = await fetch(`${API_URL}/conversations/${conversationID}/messages`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

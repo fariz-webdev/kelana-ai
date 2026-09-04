@@ -9,6 +9,7 @@ export default function Header() {
   const router = useRouter();
   const isHome = pathname === "/";
   const isAsk = pathname.startsWith("/assistant");
+  const isChat = pathname.startsWith("/chat");
   const isTrips = pathname.startsWith("/trips");
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -72,6 +73,17 @@ export default function Header() {
             }`}
           >
             Ask
+          </Link>
+
+          <Link
+            href="/chat"
+            className={`text-sm font-semibold transition-colors ${
+              isChat
+                ? "px-4 py-1.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Chat
           </Link>
 
           <Link

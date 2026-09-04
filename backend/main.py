@@ -395,7 +395,7 @@ def update_conversation(conversation_id: int, request: ConversationUpdateRequest
     finally:
         db.close()
 
-@app.delete("api/v1/conversations/{conversation_id}")
+@app.delete("/api/v1/conversations/{conversation_id}")
 def delete_conversation(conversation_id: int, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:
@@ -409,7 +409,7 @@ def delete_conversation(conversation_id: int, current_user: User = Depends(get_c
     finally:
         db.close()
 
-@app.post("/api/v1/conversations/{conversation_id}/message", status_code=201)
+@app.post("/api/v1/conversations/{conversation_id}/messages", status_code=201)
 def create_conversation_message(conversation_id: int, request: MessageRequest, current_user: User = Depends(get_current_user)):
     db = SessionLocal()
     try:

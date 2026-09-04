@@ -31,6 +31,20 @@ function formatConversationDate(value: string) {
         minute: "2-digit",
     }).format(new Date(value));
 }
+
+function formatMessageTime(value: string) {
+    const date = new Date(value);
+    const now = new Date();
+    const isToday =
+        date.getFullYear() === now.getFullYear() &&
+        date.getMonth() === now.getMonth() &&
+        date.getDate() === now.getDate();
+    const time = new Intl.DateTimeFormat("en", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+    return isToday ? `Today, ${time}` : `${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date)}, ${time}`;
+}
 function getConversationLabel(
     conversation: Conversation,
     messageByConversation: Record<number, Message[]>
@@ -508,17 +522,18 @@ export default function ChatPage() {
               <div className="mx-auto flex max-w-3xl flex-col gap-3">
                 {messages.map((message) => {
                   const isUser = message.role === "user";
+                  const isPending = "pending" in message && message.pending;
                   return (
                     <div
                       key={message.id}
-                      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                      className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
                     >
                       <div
                         className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
                           isUser
                             ? "rounded-br-md bg-[#0878c9] text-white"
                             : "rounded-bl-md border border-[#d7e5f1] bg-[#f8fbfd] text-[#172033]"
-                        } ${"pending" in message && message.pending ? "opacity-70" : ""}`}
+                        } ${isPending ? "opacity-70" : ""}`}
                       >
                         {isUser ? (
                           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -528,6 +543,11 @@ export default function ChatPage() {
                           </div>
                         )}
                       </div>
+                      {!isPending && (
+                        <span className="mt-1 px-1 text-xs text-gray-400">
+                          {formatMessageTime(message.created_at)}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
