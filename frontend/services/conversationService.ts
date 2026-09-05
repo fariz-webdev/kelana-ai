@@ -32,7 +32,7 @@ async function parseError(res:Response, fallback: string): Promise<Error> {
 }
 
 export async function getConversations(token:string): Promise<Conversation[]> {
-    const res = await fetch(`${API_URL}/conversations`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations`, {
         headers: authHeaders(token),
     });
 
@@ -44,7 +44,7 @@ export async function getConversations(token:string): Promise<Conversation[]> {
 }
 
 export async function createConversation(token:string): Promise<number> {
-    const res = await fetch(`${API_URL}/conversations`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations`, {
         method: "POST",
         headers: authHeaders(token),
     });
@@ -62,7 +62,7 @@ export async function renameConversation(
     title: string,
     token: string,
 ): Promise<Conversation> {
-    const res = await fetch(`${API_URL}/conversations/${conversationId}`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations/${conversationId}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export async function deleteConversation(
     conversationId:number,
     token: string
 ): Promise<void> {
-    const res = await fetch(`${API_URL}/conversations/${conversationId}`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations/${conversationId}`, {
         method: "DELETE",
         headers: authHeaders(token),
     });
@@ -96,7 +96,7 @@ export async function getMessages(
     conversationID:number,
     token: string
 ): Promise<Message[]> {
-    const res = await fetch(`${API_URL}/conversations/${conversationID}/messages`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations/${conversationID}/messages`, {
         headers: authHeaders(token),
     });
 
@@ -112,7 +112,7 @@ export async function sendMessage(
     content: string,
     token: string
 ): Promise<SendMessageRespone> {
-    const res = await fetch(`${API_URL}/conversations/${conversationID}/messages`, {
+    const res = await fetch(`${API_URL}/api/v1/conversations/${conversationID}/messages`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

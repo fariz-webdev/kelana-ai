@@ -16,7 +16,7 @@ export async function login(
   email: string,
   password: string
 ): Promise<AuthTokenResponse> {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -35,7 +35,7 @@ export async function register(
   email: string,
   password: string
 ): Promise<RegisterResponse> {
-  const res = await fetch(`${API_URL}/auth/register`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
@@ -58,7 +58,7 @@ export interface MeResponse {
 }
 
 export async function getMe(token: string): Promise<MeResponse> {
-  const res = await fetch(`${API_URL}/auth/me`, {
+  const res = await fetch(`${API_URL}/api/v1/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 

@@ -21,7 +21,7 @@ export default function TripsPage() {
       return;
     }
 
-    fetch(`${API_URL}/trips`, {
+    fetch(`${API_URL}/api/v1/trips`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (res) => {
