@@ -96,7 +96,7 @@ export async function getMessages(
     conversationID:number,
     token: string
 ): Promise<Message[]> {
-    const res = await fetch(`${API_URL}/api/v1/conversations/${conversationID}/messages`, {
+    const res = await fetch(`${API_URL}api/v1/conversations/${conversationID}/messages`, {
         headers: authHeaders(token),
     });
 
