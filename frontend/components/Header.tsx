@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -46,9 +47,18 @@ export default function Header() {
         {/* Logo */}
         <Link
           href="/"
-          className="text-blue-500 font-bold text-lg tracking-tight hover:text-blue-600 transition-colors"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
-          KelanaAI
+          <Image
+            src="/icon.png"
+            alt="KelanaAI logo"
+            width={28}
+            height={28}
+            className="rounded-md"
+          />
+          <span className="text-blue-500 font-bold text-lg tracking-tight">
+            KelanaAI
+          </span>
         </Link>
 
         {/* Nav */}
