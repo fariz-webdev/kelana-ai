@@ -1,26 +1,155 @@
 @import "tailwindcss";
 
+/* ─── Velora UI · Aurora Violet Theme ─────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* shadcn base tokens */
+  --background:          oklch(0.09 0.02 270);
+  --foreground:          oklch(0.97 0.01 270);
+  --card:                oklch(0.12 0.025 270);
+  --card-foreground:     oklch(0.97 0.01 270);
+  --popover:             oklch(0.12 0.025 270);
+  --popover-foreground:  oklch(0.97 0.01 270);
+  --muted:               oklch(0.18 0.03 270);
+  --muted-foreground:    oklch(0.62 0.04 270);
+  --border:              oklch(0.22 0.04 270);
+  --input:               oklch(0.22 0.04 270);
+  --ring:                oklch(0.65 0.28 300);
+  --radius:              0.75rem;
+
+  /* Aurora Violet brand ramp */
+  --primary:             oklch(0.65 0.28 300);
+  --primary-foreground:  oklch(0.985 0 0);
+  --brand:               oklch(0.65 0.28 300);
+  --brand-foreground:    oklch(0.985 0 0);
+  --brand-from:          oklch(0.58 0.30 310);   /* deep violet */
+  --brand-via:           oklch(0.63 0.27 290);   /* indigo-violet */
+  --brand-to:            oklch(0.72 0.22 265);   /* blue-violet */
+
+  /* Semantic */
+  --secondary:           oklch(0.18 0.03 270);
+  --secondary-foreground: oklch(0.97 0.01 270);
+  --accent:              oklch(0.20 0.05 290);
+  --accent-foreground:   oklch(0.97 0.01 270);
+  --destructive:         oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  /* Surface helpers */
+  --surface-1: oklch(0.13 0.025 270);
+  --surface-2: oklch(0.16 0.03  270);
+  --surface-3: oklch(0.20 0.04  270);
 }
 
+/* ─── Tailwind v4 theme mapping ─────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-primary:           var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:         var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-accent:            var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive:       var(--destructive);
+  --color-border:            var(--border);
+  --color-input:             var(--input);
+  --color-ring:              var(--ring);
+  --color-brand:             var(--brand);
+  --color-brand-from:        var(--brand-from);
+  --color-brand-via:         var(--brand-via);
+  --color-brand-to:          var(--brand-to);
+  --color-surface-1:         var(--surface-1);
+  --color-surface-2:         var(--surface-2);
+  --color-surface-3:         var(--surface-3);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  /* Aurora animation helpers */
+  --animate-aurora-1: aurora-1 14s ease-in-out infinite alternate;
+  --animate-aurora-2: aurora-2 18s ease-in-out infinite alternate;
+  --animate-aurora-3: aurora-3 22s ease-in-out infinite alternate;
+  --animate-shimmer:  shimmer 2.4s linear infinite;
+  --animate-spin-slow: spin 3s linear infinite;
 }
 
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
+/* ─── Aurora keyframes ───────────────────────────────────────────────────────── */
+@keyframes aurora-1 {
+  0%   { transform: translate(-10%, -12%) scale(1); }
+  50%  { transform: translate(12%,   8%) scale(1.25); }
+  100% { transform: translate(-6%,  14%) scale(0.95); }
+}
+
+@keyframes aurora-2 {
+  0%   { transform: translate(12%,  10%) scale(1.1); }
+  50%  { transform: translate(-14%, -6%) scale(0.9); }
+  100% { transform: translate(8%,  -12%) scale(1.2); }
+}
+
+@keyframes aurora-3 {
+  0%   { transform: translate(0%,   16%) scale(0.95); }
+  50%  { transform: translate(10%, -10%) scale(1.15); }
+  100% { transform: translate(-12%,  4%) scale(1); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: dark;
+}
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color:       var(--foreground);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Brand gradient utility ─────────────────────────────────────────────────── */
+.brand-gradient {
+  background: linear-gradient(135deg, var(--brand-from), var(--brand-via), var(--brand-to));
+}
+
+.brand-gradient-text {
+  background: linear-gradient(135deg, var(--brand-from), var(--brand-via), var(--brand-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ─── Scrollbar styling ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--surface-1); }
+::-webkit-scrollbar-thumb  { background: var(--surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* ─── Prose override for dark background ────────────────────────────────────── */
+.prose { color: var(--foreground); }
+.prose strong { color: var(--foreground); }
+.prose code { color: var(--brand-to); }

@@ -3,36 +3,34 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { askAssistant, type AskResponse } from "@/services/assistantService";
+import { AuroraBackground } from "@/components/velora/aurora-background";
+import { BlurFade } from "@/components/velora/blur-fade";
+import { ShimmerButton } from "@/components/velora/shimmer-button";
+import { SpotlightCard } from "@/components/velora/spotlight-card";
+import { AnimatedGradientText } from "@/components/velora/animated-gradient-text";
+import { Loader2, Search, FileText, HelpCircle } from "lucide-react";
 
 export default function AssistantPage() {
-  const router = useRouter();
+  const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [question, setQuestion] = useState("");
-  const [result, setResult] = useState<AskResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [question,    setQuestion]    = useState("");
+  const [result,      setResult]      = useState<AskResponse | null>(null);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Guard: redirect to login if no token
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.replace("/login");
-    } else {
-      setAuthChecked(true);
-    }
+    if (!token) router.replace("/login");
+    else setAuthChecked(true);
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!question.trim()) return;
-
     const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
+    if (!token) { router.replace("/login"); return; }
 
     setLoading(true);
     setError(null);
@@ -42,9 +40,7 @@ export default function AssistantPage() {
       const data = await askAssistant(question.trim(), token);
       setResult(data);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to connect to the server."
-      );
+      setError(err instanceof Error ? err.message : "Failed to connect to the server.");
     } finally {
       setLoading(false);
     }
@@ -52,152 +48,131 @@ export default function AssistantPage() {
 
   if (!authChecked) {
     return (
-      <main className="flex-1 flex items-center justify-center min-h-screen bg-white">
-        <div className="w-8 h-8 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin" />
+      <main className="flex-1 flex items-center justify-center min-h-screen bg-[var(--background)]">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white px-4 py-10">
-      <div className="max-w-2xl mx-auto">
+    <main className="relative min-h-screen bg-[var(--background)] px-4 py-10 overflow-hidden">
+      <AuroraBackground intensity="subtle" />
 
-        {/* Page heading */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Ask KelanaAI</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Powered by your trusted travel documents
-          </p>
-        </div>
+      <div className="relative z-10 max-w-2xl mx-auto flex flex-col gap-6">
+
+        {/* Heading */}
+        <BlurFade delay={0.05}>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight">
+              Ask{" "}
+              <AnimatedGradientText>KelanaAI</AnimatedGradientText>
+            </h1>
+            <p className="text-sm text-[var(--muted-foreground)] mt-1">
+              Powered by your trusted travel documents
+            </p>
+          </div>
+        </BlurFade>
 
         {/* Search bar */}
-        <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-          <input
-            ref={inputRef}
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask Everything about your trip plan..."
-            disabled={loading}
-            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3
-                       text-sm text-gray-700 placeholder-gray-400 outline-none
-                       focus:ring-2 focus:ring-blue-300 focus:border-transparent
-                       disabled:opacity-60 transition"
-          />
-          <button
-            type="submit"
-            disabled={loading || !question.trim()}
-            className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       text-white text-sm font-semibold px-5 py-3 rounded-xl
-                       transition-colors flex items-center gap-2"
-          >
-            {loading ? (
-              <svg
-                className="animate-spin h-4 w-4 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12" cy="12" r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-            ) : (
-              "Ask"
-            )}
-          </button>
-        </form>
+        <BlurFade delay={0.1}>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl px-4 py-3 focus-within:border-[var(--brand-via)]/60 transition-all">
+              <Search className="w-4 h-4 text-[var(--muted-foreground)] flex-shrink-0" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask anything about your trip plan…"
+                disabled={loading}
+                className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)] outline-none disabled:opacity-60"
+              />
+            </div>
+            <ShimmerButton
+              type="submit"
+              disabled={loading || !question.trim()}
+              className="px-5 py-3 rounded-2xl text-sm"
+            >
+              {loading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : "Ask"}
+            </ShimmerButton>
+          </form>
+        </BlurFade>
 
-        {/* Error state */}
+        {/* Error */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">
+          <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
 
         {/* Answer card */}
         {result && (
-          <div className="bg-teal-700 rounded-2xl overflow-hidden">
-
-            {/* Answer section */}
-            <div className="px-6 pt-6 pb-5">
-              <p className="text-xs font-bold tracking-widest text-teal-300 uppercase mb-3">
-                AI Answer
-              </p>
-              <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">
-                {result.answer}
-              </p>
-            </div>
-
-            {/* Divider */}
-            {result.sources.length > 0 && (
-              <div className="border-t border-teal-600 mx-6" />
-            )}
-
-            {/* Sources section */}
-            {result.sources.length > 0 && (
-              <div className="px-6 py-4">
-                <p className="text-xs font-bold tracking-widest text-teal-300 uppercase mb-3">
-                  Source
+          <BlurFade delay={0}>
+            <SpotlightCard>
+              {/* Answer */}
+              <div className="px-6 pt-6 pb-5">
+                <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-via)] mb-3">
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  AI Answer
                 </p>
-                <ul className="space-y-1.5">
-                  {result.sources.map((s, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      {/* File icon */}
-                      <svg
-                        className="w-4 h-4 text-teal-300 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z" />
-                      </svg>
-                      {s.source ? (
-                        <a
-                          href={s.source}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-teal-100 hover:text-white underline underline-offset-2 transition-colors truncate"
-                        >
-                          {s.filename}
-                        </a>
-                      ) : (
-                        <span className="text-sm text-teal-100">
-                          {s.filename}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-[var(--foreground)] text-sm leading-relaxed whitespace-pre-wrap">
+                  {result.answer}
+                </p>
               </div>
-            )}
-          </div>
+
+              {/* Sources */}
+              {result.sources.length > 0 && (
+                <>
+                  <div className="mx-6 border-t border-[var(--border)]" />
+                  <div className="px-6 py-4">
+                    <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-via)] mb-3">
+                      <FileText className="w-3.5 h-3.5" />
+                      Sources
+                    </p>
+                    <ul className="flex flex-col gap-1.5">
+                      {result.sources.map((s, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <FileText className="w-3.5 h-3.5 text-[var(--muted-foreground)] flex-shrink-0" />
+                          {s.source ? (
+                            <a
+                              href={s.source}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-[var(--primary)] hover:underline truncate"
+                            >
+                              {s.filename}
+                            </a>
+                          ) : (
+                            <span className="text-sm text-[var(--muted-foreground)]">{s.filename}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </SpotlightCard>
+          </BlurFade>
         )}
 
-        {/* Empty state — before any question */}
+        {/* Empty state */}
         {!result && !error && !loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center text-teal-500 mb-4">
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-              </svg>
+          <BlurFade delay={0.15}>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-14 h-14 rounded-2xl brand-gradient flex items-center justify-center text-white mb-4 shadow-lg shadow-[var(--brand-from)]/30">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <p className="text-[var(--foreground)] font-bold text-base mb-1">
+                Ask anything about travel
+              </p>
+              <p className="text-[var(--muted-foreground)] text-sm max-w-xs">
+                KelanaAI answers using your trusted travel documents as the source.
+              </p>
             </div>
-            <p className="text-gray-700 font-semibold text-base mb-1">
-              Ask anything about travel
-            </p>
-            <p className="text-gray-400 text-sm max-w-xs">
-              KelanaAI will answer using your trusted travel documents as the source.
-            </p>
-          </div>
+          </BlurFade>
         )}
-
       </div>
     </main>
   );

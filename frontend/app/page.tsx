@@ -2,6 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuroraBackground } from "@/components/velora/aurora-background";
+import { ShimmerButton } from "@/components/velora/shimmer-button";
+import { BlurFade } from "@/components/velora/blur-fade";
+import { AnimatedGradientText } from "@/components/velora/animated-gradient-text";
+import { Loader2, MapPin, Wallet, CalendarDays, Compass } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const TRAVEL_STYLES = ["Solo", "Couple", "Family", "Business", "Cultural", "Luxury"];
+
+interface FieldConfig {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  type?: string;
+  placeholder: string;
+  isSelect?: boolean;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -27,18 +44,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
 
-    // try {
-    //   const res = await fetch("http://localhost:8000/api/v1/trips", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({
-    //       destination,
-    //       days:         Number(days),
-    //       budget:       Number(budget),
-    //       travel_style: travelStyle,
-    //     }),
-    //   });
-      try {
+    try {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}api/v1/trips`, {
         method: "POST",
@@ -47,7 +53,7 @@ export default function Home() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          destination: destination,
+          destination,
           budget: Number(budget),
           days: Number(days),
           travel_style: travelStyle,
@@ -68,139 +74,203 @@ export default function Home() {
     }
   }
 
-  /* ── Form view ───────────────────────────────────────────── */
+  /* ── loading state ────────────────────────────────────────── */
   if (!authChecked) {
     return (
-      <main className="flex-1 flex items-center justify-center min-h-screen bg-white">
-        <div className="w-8 h-8 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin" />
+      <main className="flex-1 flex items-center justify-center min-h-screen bg-[var(--background)]">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white flex flex-col">
-      {/* Hero section */}
-      <div
-        className="relative w-full h-64 sm:h-80 md:h-96 bg-cover bg-center flex-shrink-0"
-        style={{ backgroundImage: `url('https://picsum.photos/seed/travel/1600/700')` }}
-      >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/70" />
+    <main className="relative min-h-screen bg-[var(--background)] overflow-hidden flex flex-col">
 
-        {/* Hero text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white drop-shadow-lg mb-3 hover:text-indigo-400">
-            KelanaAI
+      {/* ── Aurora hero ─────────────────────────────────────── */}
+      <div className="relative w-full flex-shrink-0 pt-20 pb-14 px-4 overflow-hidden flex flex-col items-center text-center">
+        <AuroraBackground intensity="vivid" />
+
+        {/* noise texture overlay */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          }}
+        />
+
+        <BlurFade delay={0.05} className="relative z-10 flex flex-col items-center gap-4">
+          {/* pill badge */}
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-[var(--brand-from)]/40 bg-[var(--brand-from)]/10 text-[var(--brand-to)] uppercase tracking-widest">
+            ✦ AI-Powered Travel Planner
+          </span>
+
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05]">
+            <AnimatedGradientText>Kelana</AnimatedGradientText>
+            <span className="text-[var(--foreground)]">AI</span>
           </h1>
-          <p className="text-white/90 text-base sm:text-lg lg:text-xl drop-shadow max-w-xl hover:text-indigo-400">
-            Your AI-powered travel planner. Tell us where you want to go.
+
+          <p className="text-[var(--muted-foreground)] text-base sm:text-lg max-w-md leading-relaxed">
+            Tell us where you want to go — we&apos;ll build your perfect itinerary in seconds.
           </p>
-        </div>
+        </BlurFade>
       </div>
 
-      {/* Form section */}
-      <div className="flex flex-col items-center px-4 py-10 bg-white flex-1">
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-md md:max-w-2xl lg:max-w-3xl"
-        >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          {/* Destination */}
-          <div className="bg-gray-100 rounded-2xl px-4 pt-3 pb-4">
-            <label className="block text-xs font-semibold text-blue-400 tracking-widest mb-1">
-              DESTINATION
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Japan"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="w-full bg-transparent text-gray-500 placeholder-gray-400 text-sm outline-none"
-            />
+      {/* ── Form card ───────────────────────────────────────── */}
+      <div className="relative z-10 flex justify-center px-4 pb-16 -mt-4">
+        <BlurFade delay={0.15} className="w-full max-w-2xl">
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-xl shadow-2xl shadow-black/40 p-6 sm:p-8">
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
+              {/* ── 2-column grid ─────────────────────────── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                {/* Destination */}
+                <FormField
+                  icon={<MapPin className="w-4 h-4" />}
+                  label="Destination"
+                  placeholder="e.g. Japan, Bali, Paris"
+                >
+                  <input
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="e.g. Japan, Bali, Paris"
+                    required
+                    className="field-input"
+                  />
+                </FormField>
+
+                {/* Budget */}
+                <FormField
+                  icon={<Wallet className="w-4 h-4" />}
+                  label="Budget (USD)"
+                  placeholder=""
+                >
+                  <input
+                    type="number"
+                    min={0}
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="e.g. 2000"
+                    required
+                    className="field-input"
+                  />
+                </FormField>
+
+                {/* Days */}
+                <FormField
+                  icon={<CalendarDays className="w-4 h-4" />}
+                  label="Days"
+                  placeholder=""
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    value={days}
+                    onChange={(e) => setDays(e.target.value)}
+                    placeholder="e.g. 5"
+                    required
+                    className="field-input"
+                  />
+                </FormField>
+
+                {/* Travel Style */}
+                <FormField
+                  icon={<Compass className="w-4 h-4" />}
+                  label="Travel Style"
+                  placeholder=""
+                >
+                  <select
+                    value={travelStyle}
+                    onChange={(e) => setTravelStyle(e.target.value)}
+                    required
+                    className="field-input cursor-pointer"
+                  >
+                    <option value="" disabled>Select a style</option>
+                    {TRAVEL_STYLES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </FormField>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              {/* Submit */}
+              <ShimmerButton
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 text-base rounded-2xl"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating your trip…
+                  </>
+                ) : (
+                  <>
+                    <span>Generate AI Trip</span>
+                    <span aria-hidden className="text-white/70">✦</span>
+                  </>
+                )}
+              </ShimmerButton>
+            </form>
           </div>
-
-          {/* Budget */}
-          <div className="bg-gray-100 rounded-2xl px-4 pt-3 pb-4">
-            <label className="block text-xs font-semibold text-blue-400 tracking-widest mb-1">
-              BUDGET (USD)
-            </label>
-            <input
-              type="number"
-              placeholder="e.g. 2000"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              className="w-full bg-transparent text-gray-500 placeholder-gray-400 text-sm outline-none"
-            />
-          </div>
-
-          {/* Days */}
-          <div className="bg-gray-100 rounded-2xl px-4 pt-3 pb-4">
-            <label className="block text-xs font-semibold text-blue-400 tracking-widest mb-1">
-              DAYS
-            </label>
-            <input
-              type="number"
-              placeholder="e.g. 5"
-              value={days}
-              onChange={(e) => setDays(e.target.value)}
-              className="w-full bg-transparent text-gray-500 placeholder-gray-400 text-sm outline-none"
-            />
-          </div>
-
-          {/* Travel Style */}
-          <div className="bg-gray-100 rounded-2xl px-4 pt-3 pb-4">
-            <label className="block text-xs font-semibold text-blue-400 tracking-widest mb-1">
-              TRAVEL STYLE
-            </label>
-            <select
-              value={travelStyle}
-              onChange={(e) => setTravelStyle(e.target.value)}
-              className="w-full bg-transparent text-gray-500 text-sm outline-none cursor-pointer"
-            >
-              <option value="" disabled>Select a style</option>
-              <option value="Solo">Solo</option>
-              <option value="Couple">Couple</option>
-              <option value="Family">Family</option>
-              <option value="Business">Business</option>
-              <option value="Cultural">Cultural</option>
-              <option value="Luxury">Luxury</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 disabled:opacity-60
-                     transition-colors text-white font-semibold py-4 rounded-2xl
-                     flex items-center justify-center gap-2"
-        >
-          {loading && (
-            <svg
-              className="animate-spin h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10"
-                stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          )}
-          {loading ? "Generating your trip..." : "Generate AI Trip"}
-        </button>
-      </form>
-
-      {/* Error */}
-      {error && (
-        <div className="w-full max-w-md md:max-w-2xl lg:max-w-3xl mt-4 p-4 bg-red-50
-                        border border-red-200 rounded-2xl text-red-600 text-sm">
-          {error}
-        </div>
-      )}
+        </BlurFade>
       </div>
+
+      {/* ── subtle bottom gradient ───────────────────────────── */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[var(--background)] to-transparent"
+      />
     </main>
+  );
+}
+
+/* ── FormField wrapper ──────────────────────────────────────── */
+function FormField({
+  icon,
+  label,
+  placeholder: _placeholder,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  placeholder: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group flex flex-col gap-1.5 rounded-2xl bg-[var(--surface-1)] border border-[var(--border)] px-4 py-3 transition-all duration-200 focus-within:border-[var(--brand-via)]/60 focus-within:bg-[var(--surface-2)]">
+      <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-via)]">
+        <span className="text-[var(--brand-via)]">{icon}</span>
+        {label}
+      </label>
+      <style jsx>{`
+        .field-input {
+          width: 100%;
+          background: transparent;
+          color: var(--foreground);
+          font-size: 0.9rem;
+          outline: none;
+          border: none;
+        }
+        .field-input::placeholder {
+          color: var(--muted-foreground);
+        }
+        .field-input option {
+          background: var(--card);
+          color: var(--foreground);
+        }
+      `}</style>
+      {children}
+    </div>
   );
 }

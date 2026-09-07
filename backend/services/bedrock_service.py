@@ -32,8 +32,8 @@ def get_ai_recommendation(
     travel_style: str,
     daily_budget: float,
     recommended_transport: str,
-    max_tokens: int = 1024,
-    temperature: float = 0.7,
+    # max_tokens: int = 1024,
+    # temperature: float = 0.7,
 ) -> str:
     """
     Generate an AI travel itinerary using Amazon Bedrock.
@@ -71,10 +71,10 @@ def get_ai_recommendation(
                 "content": [{"text": prompt}],
             }
         ],
-        "inferenceConfig": {
-            "maxTokens": max_tokens,
-            "temperature": temperature,
-        },
+        # "inferenceConfig": {
+        #     "maxTokens": max_tokens,
+        #     "temperature": temperature,
+        # },
     }
 
     response = client.invoke_model(

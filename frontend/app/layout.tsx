@@ -20,37 +20,33 @@ export const metadata: Metadata = {
 
 function Footer() {
   return (
-    <footer className="w-full border-t border-gray-100 bg-white mt-auto">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-400">
-        <span>© {new Date().getFullYear()} KelanaAI. All rights reserved.</span>
-        <nav className="flex items-center gap-5">
-          <a
-            href="#"
-            className="hover:text-blue-500 transition-colors"
-          >
-            About
-          </a>
-          <a
-            href="#"
-            className="hover:text-blue-500 transition-colors"
-          >
-            Privacy
-          </a>
-          <a
-            href="#"
-            className="hover:text-blue-500 transition-colors"
-          >
-            Terms
-          </a>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-blue-500 transition-colors"
-          >
-            GitHub
-          </a>
-        </nav>
+    <footer className="w-full mt-auto relative z-10">
+      {/* solid opaque strip so aurora blobs behind don't bleed through */}
+      <div className="border-t border-white/10 bg-[oklch(0.07_0.02_270)] backdrop-blur-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-sm text-white/60">
+            © {new Date().getFullYear()} KelanaAI. All rights reserved.
+          </span>
+          <nav className="flex items-center gap-5">
+            {["About", "Privacy", "Terms"].map((label) => (
+              <a
+                key={label}
+                href={label === "About" ? "/about" : "#"}
+                className="text-sm text-white/60 hover:text-white transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-white/60 hover:text-white transition-colors"
+            >
+              GitHub
+            </a>
+          </nav>
+        </div>
       </div>
     </footer>
   );
@@ -66,7 +62,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-screen flex flex-col bg-white">
+      <body className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--foreground)]">
         <Header />
         <div className="flex-1">{children}</div>
         <Footer />

@@ -1,415 +1,334 @@
 "use client";
 
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
-import { 
-    createConversation,
-    deleteConversation,
-    getConversations,
-    getMessages,
-    renameConversation,
-    sendMessage,
-    type Conversation,
-    type Message, 
+import {
+  createConversation,
+  deleteConversation,
+  getConversations,
+  getMessages,
+  renameConversation,
+  sendMessage,
+  type Conversation,
+  type Message,
 } from "@/services/conversationService";
+import { cn } from "@/lib/utils";
+import {
+  Plus, Send, Pencil, Trash2, Check, X, Loader2, MessageSquare,
+} from "lucide-react";
 
 type DraftMessage = Message | {
-    id: number;
-    conversation_id: number;
-    role: "user" | "assistant";
-    content: string;
-    created_at: string;
-    pending?: boolean;
+  id: number;
+  conversation_id: number;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+  pending?: boolean;
 };
 
 function formatConversationDate(value: string) {
-    return new Intl.DateTimeFormat("en", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(new Date(value));
+  return new Intl.DateTimeFormat("en", {
+    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function formatMessageTime(value: string) {
-    const date = new Date(value);
-    const now = new Date();
-    const isToday =
-        date.getFullYear() === now.getFullYear() &&
-        date.getMonth() === now.getMonth() &&
-        date.getDate() === now.getDate();
-    const time = new Intl.DateTimeFormat("en", {
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-    return isToday ? `Today, ${time}` : `${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date)}, ${time}`;
+  const date = new Date(value);
+  const now  = new Date();
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth()    === now.getMonth() &&
+    date.getDate()     === now.getDate();
+  const time = new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return isToday
+    ? `Today, ${time}`
+    : `${new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(date)}, ${time}`;
 }
+
 function getConversationLabel(
-    conversation: Conversation,
-    messageByConversation: Record<number, Message[]>
+  conversation: Conversation,
+  messageByConversation: Record<number, Message[]>
 ) {
-    if (conversation.title) return conversation.title;
-
-    const firstUserMessage = messageByConversation[conversation.id]?.find(
-        (message) => message.role === "user"
-    );
-
-    if (!firstUserMessage) return `Conversation ${conversation.id}`;
-
-    return firstUserMessage.content.length > 36
-        ? `${firstUserMessage.content.slice(0,36)}...`
-        : firstUserMessage.content;
+  if (conversation.title) return conversation.title;
+  const first = messageByConversation[conversation.id]?.find((m) => m.role === "user");
+  if (!first) return `Conversation ${conversation.id}`;
+  return first.content.length > 36 ? `${first.content.slice(0, 36)}…` : first.content;
 }
 
 export default function ChatPage() {
-    const router = useRouter();
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [token, setToken] = useState<string | null>(null);
-    const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-    const [messages, setMessages] = useState<DraftMessage[]>([]);
-    const [messageByConversation, setMessageByConversation] = useState<Record<number, Message[]>>({});
-    const [draft, setDraft] = useState("");
-    const [loadingConversations, setLoadingConversations] = useState(true);
-    const [loadingMessages, setLoadingMessages] = useState(false);
-    const [sending, setSending] = useState(false);
-    const [editingConversationId, setEditingConversationId] = useState<number | null>(null);
-    const [editingTitle, setEditingTitle] = useState("");
-    const [savingTitle, setSavingTitle] = useState(false);
-    const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
-    const [error, setError] = useState<string | null>(null);
+  const router    = useRouter();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const syncToken = window.setTimeout(() => {
-            const savedToken = localStorage.getItem("access_token");
-            if (!savedToken) {
-                router.replace("/login");
-                return;
-            }
+  const [token,                  setToken]                  = useState<string | null>(null);
+  const [conversations,          setConversations]          = useState<Conversation[]>([]);
+  const [activeConversationId,   setActiveConversationId]   = useState<number | null>(null);
+  const [messages,               setMessages]               = useState<DraftMessage[]>([]);
+  const [messageByConversation,  setMessageByConversation]  = useState<Record<number, Message[]>>({});
+  const [draft,                  setDraft]                  = useState("");
+  const [loadingConversations,   setLoadingConversations]   = useState(true);
+  const [loadingMessages,        setLoadingMessages]        = useState(false);
+  const [sending,                setSending]                = useState(false);
+  const [editingConversationId,  setEditingConversationId]  = useState<number | null>(null);
+  const [editingTitle,           setEditingTitle]           = useState("");
+  const [savingTitle,            setSavingTitle]            = useState(false);
+  const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
+  const [error,                  setError]                  = useState<string | null>(null);
 
-            setToken(savedToken);
-        }, 0);
+  /* ── auth ───────────────────────────────────────────────── */
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const saved = localStorage.getItem("access_token");
+      if (!saved) { router.replace("/login"); return; }
+      setToken(saved);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [router]);
 
-        return () => window.clearTimeout(syncToken);
-    }, [router]);
-
-    useEffect(() => {
-        if (!token) return;
-
-        getConversations(token)
-            .then((data) => {
-                setConversations(data);
-                if (data.length > 0) {
-                    setActiveConversationId(data[0].id);
-                }
-            })
-            .catch((err) => setError(err instanceof Error ? err.message : "Failed to load conversations."))
-            .finally(() => setLoadingConversations(false));
-    }, [router, token]);
-
-    useEffect(() => {
-        if (!token || activeConversationId === null) return;
-
-        let ignore = false;
-        const authToken = token;
-        const selectedConversationId = activeConversationId;
-
-        async function loadMessages() {
-            setLoadingMessages(true);
-            setError(null);
-
-            try {
-                const data = await getMessages(selectedConversationId, authToken);
-                if (ignore) return;
-                setMessages(data);
-                setMessageByConversation((prev) => ({
-                    ...prev,
-                    [selectedConversationId]: data,
-                }));
-            } catch (err) {
-                if (!ignore) {
-                    setError(err instanceof Error ? err.message : "Failed to load messages.");
-                }
-            } finally {
-                if (!ignore) {
-                    setLoadingMessages(false);
-                }
-            }
-        }
-
-        void loadMessages();
-
-        return () => {
-            ignore = true;
-        };
-    }, [activeConversationId, token]);
-
-    useEffect(() => {
-        scrollRef.current?.scrollIntoView({behavior: "smooth"});
-    }, [messages, loadingMessages, sending]);
-
-    const canSend = useMemo(() => draft.trim().length > 0 && !sending, [
-        draft,
-        sending,
-    ]);
-    const activeConversation = conversations.find(
-        (conversation) => conversation.id === activeConversationId
-    );
-    const activeConversationLabel = activeConversation
-        ? getConversationLabel(activeConversation, messageByConversation)
-        : "Chat";
-
-    async function refreshConversations(authToken: string, seelectedId: number) {
-        const data = await getConversations(authToken);
+  /* ── load conversations ─────────────────────────────────── */
+  useEffect(() => {
+    if (!token) return;
+    getConversations(token)
+      .then((data) => {
         setConversations(data);
-        setActiveConversationId(seelectedId);
+        if (data.length > 0) setActiveConversationId(data[0].id);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load conversations."))
+      .finally(() => setLoadingConversations(false));
+  }, [token]);
+
+  /* ── load messages when conversation changes ─────────────── */
+  useEffect(() => {
+    if (!token || activeConversationId === null) return;
+    let ignore = false;
+    const authToken = token;
+    const convId    = activeConversationId;
+
+    async function load() {
+      setLoadingMessages(true);
+      setError(null);
+      try {
+        const data = await getMessages(convId, authToken);
+        if (ignore) return;
+        setMessages(data);
+        setMessageByConversation((prev) => ({ ...prev, [convId]: data }));
+      } catch (err) {
+        if (!ignore) setError(err instanceof Error ? err.message : "Failed to load messages.");
+      } finally {
+        if (!ignore) setLoadingMessages(false);
+      }
     }
+    void load();
+    return () => { ignore = true; };
+  }, [activeConversationId, token]);
 
-    async function handleNewConversation() {
-        if (!token) return;
+  /* ── auto-scroll ────────────────────────────────────────── */
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loadingMessages, sending]);
 
-        setError(null);
-        try {
-            const conversationId = await createConversation(token);
-            await refreshConversations(token, conversationId);
-            setMessages([]);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to create conversation.");
-        }
+  const canSend = useMemo(() => draft.trim().length > 0 && !sending, [draft, sending]);
+  const activeConversation = conversations.find((c) => c.id === activeConversationId);
+  const activeLabel = activeConversation
+    ? getConversationLabel(activeConversation, messageByConversation)
+    : "Chat";
+
+  /* ── handlers ───────────────────────────────────────────── */
+  async function refreshConversations(authToken: string, selectedId: number) {
+    const data = await getConversations(authToken);
+    setConversations(data);
+    setActiveConversationId(selectedId);
+  }
+
+  async function handleNewConversation() {
+    if (!token) return;
+    setError(null);
+    try {
+      const id = await createConversation(token);
+      await refreshConversations(token, id);
+      setMessages([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create conversation.");
     }
+  }
 
-    async function handleSelectedConversation(conversationId: number){
-        if (editingConversationId !== null) return;
-        if (conversationId === activeConversationId) return;
-        setActiveConversationId(conversationId);
-        setMessages(messageByConversation[conversationId] ?? []);
+  async function handleSelectConversation(id: number) {
+    if (editingConversationId !== null || id === activeConversationId) return;
+    setActiveConversationId(id);
+    setMessages(messageByConversation[id] ?? []);
+  }
+
+  function startRenaming(conversation: Conversation) {
+    setEditingConversationId(conversation.id);
+    setEditingTitle(getConversationLabel(conversation, messageByConversation));
+    setError(null);
+  }
+
+  function cancelRenaming() {
+    setEditingConversationId(null);
+    setEditingTitle("");
+  }
+
+  async function handleRename(conversationId: number) {
+    if (!token || savingTitle) return;
+    const title = editingTitle.trim();
+    if (!title) { setError("Title is required."); return; }
+    setSavingTitle(true);
+    try {
+      const updated = await renameConversation(conversationId, title, token);
+      setConversations((prev) => prev.map((c) => c.id === conversationId ? updated : c));
+      cancelRenaming();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to rename.");
+    } finally {
+      setSavingTitle(false);
     }
+  }
 
-    function startRenaming(conversation: Conversation) {
-        setEditingConversationId(conversation.id);
-        setEditingTitle(getConversationLabel(conversation, messageByConversation));
-        setError(null);
+  async function handleDelete(conversation: Conversation, label: string) {
+    if (!token || deletingConversationId !== null) return;
+    if (!window.confirm(`Delete "${label}" and all its messages?`)) return;
+    setDeletingConversationId(conversation.id);
+    try {
+      await deleteConversation(conversation.id, token);
+      const next = conversations.filter((c) => c.id !== conversation.id);
+      setConversations(next);
+      setMessageByConversation((prev) => { const n = { ...prev }; delete n[conversation.id]; return n; });
+      if (conversation.id === activeConversationId) {
+        const nextActive = next[0] ?? null;
+        setActiveConversationId(nextActive?.id ?? null);
+        setMessages(nextActive ? messageByConversation[nextActive.id] ?? [] : []);
+      }
+      if (conversation.id === editingConversationId) cancelRenaming();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete conversation.");
+    } finally {
+      setDeletingConversationId(null);
     }
+  }
 
-    function cancelRenaming() {
-        setEditingConversationId(null);
-        setEditingTitle("");
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!token || !canSend) return;
+    const content = draft.trim();
+    setDraft("");
+    setError(null);
+    setSending(true);
+    let convId = activeConversationId;
+    try {
+      if (convId === null) {
+        convId = await createConversation(token);
+        await refreshConversations(token, convId);
+      }
+      const optimistic: DraftMessage = {
+        id: Date.now() * -1, conversation_id: convId,
+        role: "user", content, created_at: new Date().toISOString(), pending: true,
+      };
+      setMessages((prev) => [...prev, optimistic]);
+      const response = await sendMessage(convId, content, token);
+      const latest   = await getMessages(response.conversation_id, token);
+      setMessages(latest);
+      setMessageByConversation((prev) => ({ ...prev, [response.conversation_id]: latest }));
+      await refreshConversations(token, response.conversation_id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message.");
+      setDraft(content);
+    } finally {
+      setSending(false);
     }
+  }
 
-    async function handleRenameConversation(conversationId: number) {
-        if (!token || savingTitle) return;
-
-        const title = editingTitle.trim();
-        if (!title) {
-            setError("Conversation title is required.");
-            return;
-        }
-
-        setSavingTitle(true);
-        setError(null);
-
-        try {
-            const updateConversation = await renameConversation(
-                conversationId,
-                title,
-                token
-            );
-            setConversations((prev) => 
-                prev.map((conversation) => 
-                    conversation.id === conversationId ? updateConversation : conversation
-                )
-            );
-            cancelRenaming();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to rename conversation.");
-        } finally {
-            setSavingTitle(false);
-        }
-    }
-
-    async function handleDeleteConversation(
-        conversation: Conversation,
-        label: string
-    ) {
-        if (!token || deletingConversationId !== null) return;
-
-        const confirmed = window.confirm(`Delete "${label}" and all of its messages?`);
-        if (!confirmed) return;
-
-        setDeletingConversationId(conversation.id);
-        setError(null);
-
-        try {
-            await deleteConversation(conversation.id, token);
-            const nextConversations = conversations.filter(
-                (item) => item.id !== conversation.id
-            );
-            setConversations(nextConversations);
-            setMessageByConversation((prev) => {
-                const next = {...prev};
-                delete next[conversation.id];
-                return next;
-            });
-
-            if (conversation.id === activeConversationId) {
-                const nextActiveConversation = nextConversations[0] ?? null;
-                setActiveConversationId(nextActiveConversation?.id ?? null);
-                setMessages(
-                    nextActiveConversation
-                        ? messageByConversation[nextActiveConversation.id] ?? []
-                        : []
-                );
-            }
-
-            if (conversation.id === editingConversationId) {
-                cancelRenaming();
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to delete conversation.");
-        } finally {
-            setDeletingConversationId(null);
-        }
-    }
-
-    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-        e.preventDefault();
-        if (!token || !canSend) return;
-
-        const content = draft.trim();
-        setDraft("");
-        setError(null);
-        setSending(true);
-
-        let conversationId = activeConversationId;
-
-        try {
-            if (conversationId === null) {
-                conversationId = await createConversation(token);
-                await refreshConversations(token, conversationId);
-            }
-
-            const optimisticMessage: DraftMessage = {
-                id: Date.now() * -1,
-                conversation_id: conversationId,
-                role: "user",
-                content,
-                created_at: new Date().toISOString(),
-                pending: true,
-            };
-            setMessages((prev) => [...prev, optimisticMessage]);
-
-            const response = await sendMessage(conversationId, content, token);
-            const latestMessages = await getMessages(response.conversation_id, token);
-            setMessages(latestMessages);
-            setMessageByConversation((prev) => ({
-                ...prev,
-                [response.conversation_id]: latestMessages,
-            }));
-            await refreshConversations(token, response.conversation_id);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to send message.");
-            setDraft(content);
-        } finally {
-            setSending(false);
-        }
-    }
-
+  /* ── sidebar icon button ─────────────────────────────────── */
+  function SideIconBtn({
+    onClick, disabled, label, danger, children,
+  }: {
+    onClick: () => void;
+    disabled?: boolean;
+    label: string;
+    danger?: boolean;
+    children: React.ReactNode;
+  }) {
     return (
-        <main className="flex-1 bg-[#f7fafc] px-3 py-4">
-      <div className="mx-auto flex h-[calc(100vh-8rem)] min-h-[620px] max-w-6xl overflow-hidden rounded-lg border border-[#d7e5f1] bg-white shadow-sm">
-        <aside className="hidden w-72 shrink-0 border-r border-[#d7e5f1] bg-[#f0f4f8] md:flex md:flex-col">
-          <div className="border-b border-[#d7e5f1] p-3">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        className={cn(
+          "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all",
+          "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          danger
+            ? "text-[var(--muted-foreground)] hover:bg-red-500/15 hover:text-red-400"
+            : "text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]",
+          disabled && "cursor-not-allowed opacity-30"
+        )}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <main className="flex-1 bg-[var(--background)] px-3 py-4">
+      <div className="mx-auto flex h-[calc(100vh-8rem)] min-h-[620px] max-w-6xl overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl shadow-black/40">
+
+        {/* ── Sidebar ─────────────────────────────────────── */}
+        <aside className="hidden w-72 shrink-0 border-r border-[var(--border)] bg-[var(--surface-1)] md:flex md:flex-col">
+
+          {/* New chat button */}
+          <div className="p-3 border-b border-[var(--border)]">
             <button
               type="button"
               onClick={handleNewConversation}
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#2196F3] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-gray-300"
               disabled={!token}
+              className={cn(
+                "flex h-10 w-full items-center justify-center gap-2 rounded-xl",
+                "brand-gradient text-white text-sm font-semibold transition-all",
+                "hover:opacity-90 hover:shadow-md hover:shadow-[var(--brand-from)]/30",
+                "disabled:opacity-40 disabled:cursor-not-allowed"
+              )}
             >
-              <span aria-hidden="true" className="text-lg leading-none">+</span>
+              <Plus className="w-4 h-4" />
               New Chat
             </button>
           </div>
 
+          {/* Conversation list */}
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {loadingConversations ? (
               <div className="flex h-24 items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-4 border-[#d7e5f1] border-t-[#2196F3]" />
+                <Loader2 className="w-5 h-5 animate-spin text-[var(--primary)]" />
               </div>
             ) : conversations.length === 0 ? (
-              <p className="px-3 py-4 text-sm text-gray-500">No conversations yet</p>
+              <p className="px-3 py-4 text-sm text-[var(--muted-foreground)]">No conversations yet</p>
             ) : (
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 {conversations.map((conversation) => {
-                  const active = conversation.id === activeConversationId;
+                  const active  = conversation.id === activeConversationId;
                   const editing = conversation.id === editingConversationId;
-                  const label = getConversationLabel(
-                    conversation,
-                    messageByConversation
-                  );
+                  const label   = getConversationLabel(conversation, messageByConversation);
 
                   if (editing) {
                     return (
-                      <div
-                        key={conversation.id}
-                        className="rounded-lg bg-white p-2 shadow-sm"
-                      >
-                        <label
-                          htmlFor={`conversation-title-${conversation.id}`}
-                          className="sr-only"
-                        >
-                          Conversation title
-                        </label>
+                      <div key={conversation.id} className="rounded-xl bg-[var(--surface-2)] p-2 border border-[var(--border)]">
                         <input
-                          id={`conversation-title-${conversation.id}`}
                           value={editingTitle}
                           onChange={(e) => setEditingTitle(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              void handleRenameConversation(conversation.id);
-                            }
-                            if (e.key === "Escape") {
-                              cancelRenaming();
-                            }
+                            if (e.key === "Enter")  { e.preventDefault(); void handleRename(conversation.id); }
+                            if (e.key === "Escape") cancelRenaming();
                           }}
                           maxLength={100}
                           autoFocus
-                          className="h-9 w-full rounded-md border border-[#d7e5f1] bg-white px-2 text-sm text-[var(--foreground)] outline-none focus:border-[#2196F3]"
+                          className="h-8 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--brand-via)]/60"
                         />
-                        <div className="mt-2 flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={cancelRenaming}
-                            className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-[#f0f4f8]"
-                            aria-label="Cancel rename"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              className="h-4 w-4"
-                              aria-hidden="true"
-                            >
-                              <path d="m12 10.59 5.3-5.3 1.4 1.42-5.29 5.29 5.3 5.3-1.42 1.4-5.29-5.29-5.3 5.3-1.4-1.42 5.29-5.29-5.3-5.3 1.42-1.4 5.29 5.29Z" />
-                            </svg>
+                        <div className="mt-1.5 flex justify-end gap-1">
+                          <button type="button" onClick={cancelRenaming} className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--surface-3)]">
+                            <X className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRenameConversation(conversation.id)}
-                            disabled={savingTitle}
-                            className="flex h-8 w-8 items-center justify-center rounded-md bg-[#2196F3] text-white transition-colors hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-gray-300"
-                            aria-label="Save conversation title"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              className="h-4 w-4"
-                              aria-hidden="true"
-                            >
-                              <path d="m9 16.17-3.59-3.58L4 14l5 5L20 8l-1.41-1.41L9 16.17Z" />
-                            </svg>
+                          <button type="button" onClick={() => handleRename(conversation.id)} disabled={savingTitle}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg brand-gradient text-white disabled:opacity-40">
+                            <Check className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
@@ -419,57 +338,36 @@ export default function ChatPage() {
                   return (
                     <div
                       key={conversation.id}
-                      className={`group flex items-center gap-1 rounded-lg pr-1 transition-colors ${
+                      className={cn(
+                        "group flex items-center gap-1 rounded-xl pr-1 transition-all duration-150 cursor-pointer",
                         active
-                          ? "bg-white text-[#1565C0] shadow-sm"
-                          : "text-gray-600 hover:bg-white/80"
-                      }`}
+                          ? "bg-[var(--surface-2)] border border-[var(--brand-from)]/25"
+                          : "hover:bg-[var(--surface-2)] border border-transparent"
+                      )}
                     >
                       <button
                         type="button"
-                        onClick={() => handleSelectedConversation(conversation.id)}
+                        onClick={() => handleSelectConversation(conversation.id)}
                         className="min-w-0 flex-1 px-3 py-2 text-left"
                       >
-                        <span className="block truncate text-sm font-semibold">
+                        <span className={cn("block truncate text-sm font-semibold", active ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]")}>
                           {label}
                         </span>
-                        <span className="mt-1 block text-xs text-gray-400">
+                        <span className="mt-0.5 block text-xs text-[var(--muted-foreground)]/70">
                           {formatConversationDate(conversation.created_at)}
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => startRenaming(conversation)}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 opacity-100 transition-colors hover:bg-[#e3f0fd] hover:text-[#1976D2] md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Rename conversation"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        >
-                          <path d="M4 17.46V20h2.54L17.06 9.48l-2.54-2.54L4 17.46ZM19.04 7.5a1 1 0 0 0 0-1.41l-1.13-1.13a1 1 0 0 0-1.41 0l-.9.9 2.54 2.54.9-.9Z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteConversation(conversation, label)}
+                      <SideIconBtn onClick={() => startRenaming(conversation)} label="Rename">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </SideIconBtn>
+                      <SideIconBtn
+                        onClick={() => handleDelete(conversation, label)}
                         disabled={deletingConversationId === conversation.id}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 opacity-100 transition-colors hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:text-gray-300 md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Delete conversation"
+                        label="Delete"
+                        danger
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        >
-                          <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-.8 11a2 2 0 0 1-2 2H8.8a2 2 0 0 1-2-2L6 9Zm3 2v8h2v-8H9Zm4 0v8h2v-8h-2Z" />
-                        </svg>
-                      </button>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </SideIconBtn>
                     </div>
                   );
                 })}
@@ -478,42 +376,46 @@ export default function ChatPage() {
           </div>
         </aside>
 
+        {/* ── Chat area ───────────────────────────────────── */}
         <section className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-14 items-center justify-between border-b border-[#d7e5f1] px-4">
+
+          {/* Header bar */}
+          <div className="flex min-h-14 items-center justify-between border-b border-[var(--border)] px-4">
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold text-[var(--foreground)]">
-                {activeConversationLabel}
-              </h1>
-              <p className="text-xs text-gray-400">KelanaAI Travel Assistant</p>
+              <h1 className="truncate text-sm font-bold text-[var(--foreground)]">{activeLabel}</h1>
+              <p className="text-xs text-[var(--muted-foreground)]">KelanaAI Travel Assistant</p>
             </div>
             <button
               type="button"
               onClick={handleNewConversation}
-              className="h-9 rounded-lg border border-[#d7e5f1] px-3 text-sm font-semibold text-[#1976D2] transition-colors hover:bg-[#e3f0fd] md:hidden"
               disabled={!token}
+              className="h-8 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--primary)] hover:bg-[var(--surface-2)] transition-colors md:hidden"
             >
               New
             </button>
           </div>
 
+          {/* Error banner */}
           {error && (
-            <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          <div className="min-h-0 flex-1 overflow-y-auto bg-white px-4 py-5">
+          {/* Messages */}
+          <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--background)] px-4 py-5">
             {loadingMessages ? (
               <div className="flex h-full items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#d7e5f1] border-t-[#2196F3]" />
+                <Loader2 className="w-7 h-7 animate-spin text-[var(--primary)]" />
               </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center">
                 <div className="max-w-sm">
-                  <h2 className="text-xl font-bold text-[var(--foreground)]">
-                    Where should we go next?
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                  <div className="w-14 h-14 rounded-2xl brand-gradient flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-[var(--brand-from)]/30">
+                    <MessageSquare className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-bold text-[var(--foreground)]">Where should we go next?</h2>
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)] leading-relaxed">
                     Ask about routes, itineraries, budgets, or what to do on a specific day.
                   </p>
                 </div>
@@ -521,30 +423,29 @@ export default function ChatPage() {
             ) : (
               <div className="mx-auto flex max-w-3xl flex-col gap-3">
                 {messages.map((message) => {
-                  const isUser = message.role === "user";
+                  const isUser    = message.role === "user";
                   const isPending = "pending" in message && message.pending;
                   return (
-                    <div
-                      key={message.id}
-                      className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-                    >
+                    <div key={message.id} className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
                       <div
-                        className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
+                        className={cn(
+                          "max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-6",
                           isUser
-                            ? "rounded-br-md bg-[#0878c9] text-white"
-                            : "rounded-bl-md border border-[#d7e5f1] bg-[#f8fbfd] text-[#172033]"
-                        } ${isPending ? "opacity-70" : ""}`}
+                            ? "rounded-br-sm brand-gradient text-white shadow-md shadow-[var(--brand-from)]/25"
+                            : "rounded-bl-sm border border-[var(--brand-via)]/20 bg-[var(--brand-from)]/10 text-[var(--foreground)]",
+                          isPending && "opacity-60"
+                        )}
                       >
                         {isUser ? (
                           <p className="whitespace-pre-wrap">{message.content}</p>
                         ) : (
-                          <div className="prose prose-sm max-w-none text-inherit prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
+                          <div className="prose prose-sm prose-invert max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-1">
                             <ReactMarkdown>{message.content}</ReactMarkdown>
                           </div>
                         )}
                       </div>
                       {!isPending && (
-                        <span className="mt-1 px-1 text-xs text-gray-400">
+                        <span className="mt-1 px-1 text-[11px] text-[var(--muted-foreground)]">
                           {formatMessageTime(message.created_at)}
                         </span>
                       )}
@@ -553,8 +454,10 @@ export default function ChatPage() {
                 })}
                 {sending && (
                   <div className="flex justify-start">
-                    <div className="rounded-2xl rounded-bl-md border border-[#d7e5f1] bg-[#f8fbfd] px-4 py-3 text-sm text-gray-500 shadow-sm">
-                      Thinking...
+                    <div className="rounded-2xl rounded-bl-sm border border-[var(--brand-via)]/20 bg-[var(--brand-from)]/10 px-4 py-3 text-sm text-[var(--muted-foreground)]">
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Thinking…
+                      </span>
                     </div>
                   </div>
                 )}
@@ -563,14 +466,10 @@ export default function ChatPage() {
             )}
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="border-t border-[#d7e5f1] bg-white p-3"
-          >
-            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-[#d7e5f1] bg-[#f0f4f8] p-2 shadow-sm">
-              <label htmlFor="chat-message" className="sr-only">
-                Message
-              </label>
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="border-t border-[var(--border)] bg-[var(--card)] p-3">
+            <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-2 focus-within:border-[var(--brand-via)]/60 transition-all">
+              <label htmlFor="chat-message" className="sr-only">Message</label>
               <textarea
                 id="chat-message"
                 value={draft}
@@ -582,29 +481,26 @@ export default function ChatPage() {
                   }
                 }}
                 rows={1}
-                placeholder="Type a message..."
-                className="max-h-32 min-h-10 flex-1 resize-none bg-transparent px-3 py-2 text-sm text-[var(--foreground)] outline-none placeholder:text-gray-500"
+                placeholder="Type a message… (Enter to send)"
+                className="max-h-32 min-h-[2.5rem] flex-1 resize-none bg-transparent px-3 py-2 text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)] outline-none"
               />
               <button
                 type="submit"
                 disabled={!canSend}
                 aria-label="Send message"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0878c9] text-white transition-colors hover:bg-[#0669b1] disabled:cursor-not-allowed disabled:bg-gray-300"
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all",
+                  "brand-gradient text-white",
+                  "hover:opacity-90 hover:scale-[1.05] hover:shadow-md hover:shadow-[var(--brand-from)]/30",
+                  "disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
+                )}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                >
-                  <path d="M3.48 20.52 22 12 3.48 3.48 3 10.1l10 1.9-10 1.9.48 6.62Z" />
-                </svg>
+                <Send className="w-4 h-4" />
               </button>
             </div>
           </form>
         </section>
       </div>
     </main>
-    );
+  );
 }
